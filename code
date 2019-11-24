@@ -1,367 +1,236 @@
-;run-game: string --> world
+;Program: Aliens Attack v5
 
-; A world is structure, (make-world d a dir) where d=rocket, a=alien, and dir=direction
+(define (main a-name)
+  (big-bang INIT-WORLD ;init world
+    (on-draw draw-world) ;DONE
+    (on-key process-key) ;DONE
+    (on-tick create-new-world) ;DONE
+    (stop-when game-over? last-message)
+    (name a-name)))
 
-(define-struct world(rocket alien dir shot))
 
-;an alien is a posn, (make-posn x y),
-
-;s.t. 0<=x<=WIDTH-1 and 0<=y<= HEIGHT
-
-;TEMPLATE FOR FUNCTIONS ON AN ALIEN
-
-;f-on-alien: alien --> ???
-
-;Purpose:
-
-;(define (f-on-alien a)
-
-(define (run-game a-name)
-
-  (big-bang INIT-WORLD ;the initial world
-
-    (on-draw draw-world) ;what to do when the world is drawn
-
-    (on-key process-key) ;what to do when a key is pressed
-
-    (on-tick create-new-world) ;every tick there is a new image
-
-    (stop-when game-over?) ;what happens when the time runs out
-
-    (name a-name)))      ;the name of the player
-
-   
-
+; CONSTANTS
 (define WIDTH 800)
-
 (define HEIGHT 500)
+(define ROCKET-IMG (scale .5 .)) ; our playermodel
+(define E-SCENE (empty-scene WIDTH HEIGHT)) ;our scene, define in dimensions of W/H
+(define ROCKET-Y (- HEIGHT (/ (image-height ROCKET-IMG) 2))) ;god knows
+(define ROCKET-DELTA-X 5) ;the increment of movement for our rocket left/right
+(define ALIEN (make-posn (/ WIDTH 2) (/ HEIGHT 2)))
 
-(define ROCKET-IMG .)
+(define ALIEN-DELTA-X 4)
+(define ALIEN-DELTA-Y 8)
 
-(define ALIEN-IMG .)
-(define SHOT-IMG .)
+(define ALIEN-IMG (scale .20 .))
 
-(define E-SCENE (empty-scene WIDTH HEIGHT))
-
-(define RIGHT-EDGE (- (sub1 WIDTH) ( / (image-width ROCKET-IMG) 2)))
-
+(define RIGHT-EDGE (- (sub1 WIDTH) (/ (image-width ROCKET-IMG) 2)))
 (define LEFT-EDGE (/ (image-width ROCKET-IMG) 2))
 
-(define ROCKET-Y (- HEIGHT (/ (image-height ROCKET-IMG) 2)));subtracting height to move rocket down
-
-(define ROCKET-DELTA-X 5)
-
-(define ALIEN-DELTA-X 2)
-
-(define ALIEN-DELTA-Y 25)
-
-(define ALIEN (make-posn (/ (image-width ALIEN-IMG) 2) (/ (image-height ALIEN-IMG) 2)))
-
-(define INIT-DIR "right")
-(define SHOT-DELTA-Y 3)
-(define SHOT-START-Y(- (sub1 HEIGHT)(image-height ROCKET-IMG)))
-(define ALIEN-WIDTH(image-width ALIEN-IMG))
-(define ALIEN-HEIGHT(image-height ALIEN-IMG))
-
-;Examples of shots
-(define SHOT1(make-posn 50 50))
-(define SHOT2 #false)
+(define ALIEN-WIDTH (image-width ALIEN-IMG))
+(define ALIEN-HEIGHT (image-height ALIEN-IMG))
 
 
+(define SHOT-START-Y (- (sub1 HEIGHT) (image-height ROCKET-IMG)))
+(define SHOT-IMG (circle 3 "solid" "green"))
 
-
-
-
-;a rocket is a positive number,r, such that 0 <=r<=WIDTH-1
-
+(define win-msg (text "The Earth was saved!" 24 "green"))
+(define lose-msg (text "The Earth was subjugated!" 24 "red"))
 (define ROCKET (/ WIDTH 2))
-
-;the world is the rocket and the alien--only thing that changes!
-
-(define INIT-WORLD (make-world ROCKET ALIEN INIT-DIR #false))
-
- 
-
-;draw-world: world --> scene ;input world output into the scene
-
-;Purpose: To draw the given world in the empty scene
-
-;INVENTORY
-
-  ;(world-rocket a-world) is a rocket
-
-  ;(world-alien a-world) is an alien
-
-  ;(world-dir a-world) a string for the direction of the alien
-
-(define (draw-world w)
-  (draw-shot (world-shot w)
-
-  (draw-alien (world-alien w)
-
-              (draw-rocket (world-rocket w) E-SCENE))))
-
-;draw-shot
-
-(define (draw-shot a-shot scn)
-  (cond [(false? a-shot) scn]
-        [else (place-image SHOT-IMG (posn-x a-shot) (posn-y a-shot) scn)]))
-
-;draw-alien: alien scene --> scene
-
-;purpose: to draw the given alien in the given file
-
-;INVENTORY
-
-  ;(posn-x a) -- a number for the x of the alien
-
-  ;(posn-y a) -- a number for the y of the alien
-
-(define (draw-alien a scn)
-
-  (place-image ALIEN-IMG (posn-x a) (posn-y a ) scn))
-
-;draw-rocket: rocket-scene --> scene
-
-;Purpose: to draw the given rocket in the given scene
-
-(define (draw-rocket a-rocket scn)
-
-  (place-image ROCKET-IMG a-rocket ROCKET-Y scn))
-
-(check-expect (draw-rocket 100 E-SCENE)
-
-              (place-image ROCKET-IMG 100 ROCKET-Y E-SCENE))
-
- 
-
-;process-key: world string --> world
-
-;Purpose: To process keystrokes
-
-(define(process-key a-world a-key)
-
-  (make-world (move-rocket (world-rocket a-world) a-key)
-
-              (world-alien a-world)
-
-              (world-dir a-world)
-              (compute-shot (world-shot a-world) (world-rocket a-world))))
-
-;compute shot -> shot rocket --> shot
-;purpose: to compute a shot when the shooting key is pressed
-
-(define (compute-shot a-shot a-rocket)
-  (cond [(false? a-shot)(make-posn a-rocket SHOT-START-Y)]
-        [else a-shot]))
-
-(check-expect (process-key (make-world ROCKET ALIEN INIT-DIR) "right")
-
-              (make-world (+ ROCKET ROCKET-DELTA-X) ALIEN INIT-DIR #false))
-
-(check-expect (process-key (make-world ROCKET ALIEN INIT-DIR) "left")
-
-              (make-world (- ROCKET ROCKET-DELTA-X) ALIEN INIT-DIR #false))
-
-(check-expect (process-key (make-world ROCKET ALIEN INIT-DIR) "up")
-
-              (make-world ROCKET ALIEN INIT-DIR #false))
-
-(check-expect (process-key (make-world ROCKET ALIEN INIT-DIR) "a")
-
-              (make-world ROCKET ALIEN INIT-DIR #false))
-
- 
-
-;create-new-world: world --> world
-
-;purpose: to compute the next world when the clock ticks
-
-
-;move shot: shot-> shot
-;to move the given shot
-(define(move-shot a-shot)
-  (cond [(false? a-shot) #false]
-        [(<(- (posn-y a-shot) SHOT-DELTA-Y) 0 ) #false]
-        [else (make-posn (posn-x a-shot)(- (posn-y a-shot) SHOT-DELTA-Y))]))
-
-
-(define (create-new-world a-world)
-  (make-world
-   (world-rocket a-world)
-   (move-alien (world-alien a-world)(world-dir a-world))
-   (compute-new-direction (move-alien (world-alien a-world)(world-dir a-world))
-                           (world-dir a-world))
-   (move-shot (world-shot a-world))))
-
- 
-
-;move-alien: alien direction --> alien
-
-;purpose: to move the givene alien in the given direction
-
-(define (move-alien a dir)
-
-  (cond [(string=? dir "right") (make-posn (+ (posn-x a) ALIEN-DELTA-X)
-
-                                           (posn-y a))]
-
-        [(string=? dir "left") (make-posn (- (posn-x a) ALIEN-DELTA-X)
-
-                                          (posn-y a))]
-
-        [else (make-posn (posn-x a)
-
-                          (+ (posn-y a) ALIEN-DELTA-Y))]))
-
-;move-rocket:rocket string --> rocket
-
-;Purpose: To move the rocket in the given direction
-
-(define (move-rocket a-rocket direction)
-
-  (cond [(and (string=? direction "right")
-
-              (<=(+ a-rocket ROCKET-DELTA-X) (- WIDTH (/ (image-width ROCKET-IMG) 2) )))
-
-         (+ a-rocket ROCKET-DELTA-X)]
-
-        [(and (string=? direction "left")
-
-              (>= (- a-rocket ROCKET-DELTA-X) (/ (image-width ROCKET-IMG) 2)))
-
-         (- a-rocket ROCKET-DELTA-X 0)]
-
-        [else a-rocket]))
-
-(check-expect (move-rocket ROCKET "right") (+ ROCKET ROCKET-DELTA-X))
-
-(check-expect (move-rocket ROCKET "left") (- ROCKET ROCKET-DELTA-X))
-
-(check-expect (move-rocket ROCKET "up") ROCKET)
-
-(check-expect (move-rocket ROCKET "a") ROCKET)
-
-(check-expect (move-rocket 0 "left") 0)
-
-(check-expect (move-rocket (- WIDTH 1) "right") (- WIDTH 1))
-
-;what to do when a key is pressed
-
- 
-
-;compute-new-direction: alien direction --> direction
-
-;purpose: to determine the direction of the given new alien using the givne old direction
-
-(define (compute-new-direction a dir)
-
-  (cond [(or (and (string=? dir "right") (alien-at-right-edge? a))
-
-             (and (string=? dir "left") (alien-at-left-edge? a)))
-
-             "down"]
-
-        [(and (string=? dir "down") (alien-at-right-edge? a)) "left"]
-
-        [(and (string=? dir "down") (alien-at-left-edge? a)) "right"]
-
-        [else dir]))
-
-(check-expect (compute-new-direction (make-posn 100 22) "right") "right")
-
-(check-expect (compute-new-direction (make-posn 100 22) "left") "left")
-
-(check-expect (compute-new-direction (make-posn (sub1 WIDTH) 22) "down") "left")
-
-(check-expect (compute-new-direction (make-posn 0 22) "left") "down")
-
-(check-expect (compute-new-direction (make-posn (sub1 WIDTH) 22) "down") "left")
-
-(check-expect (compute-new-direction (make-posn 0 22) "down") "right")
-
- 
-
-;alien-at-right-edge?: alien --> boolean
-
-;purpose: to determine if the given alien is at the right edge of the game scene
-
-(define (alien-at-right-edge? a)
-
-  ;INVENTORY
-
-  ;(posn-x a) a number for the x coordiante of a
-
-  ;(posn-y a) a number for the y coordinate of a
-
-  (>= (+ (posn-x a) ALIEN-DELTA-X) RIGHT-EDGE))
-
-(check-expect (alien-at-right-edge? ALIEN) false)
-
-(check-expect (alien-at-right-edge? (make-posn (sub1 WIDTH) 100)) true)
-
-;alien-at-left-edge?: alien --> boolean
-
-;purpose: to determine if the given alien is at the left edge of the game sce
-
-(define (alien-at-left-edge? a)
-
-  (<= (- (posn-x a) ALIEN-DELTA-X) LEFT-EDGE))
-
-(check-expect (alien-at-left-edge? ALIEN) false)
-
-(check-expect (alien-at-left-edge? (make-posn 1 100)) true)
-
- 
-
-;game-over?: world--> boolean
-
-;purpose: to determine if the game is over
-
+(define SHOT-DELTA-Y 3)
+
+;Define init-aliens without typing each one
+(define INIT-ALIENS ;3 rows of aliens with 9 aliens per row
+  (build-list 27 (lambda (n) (make-posn (local [(define rem (remainder n 9))]
+                                          (cond [(= rem 0) (- (/ WIDTH 2) 300)]
+                                                [(= rem 1) (- (/ WIDTH 2) 225)]
+                                                [(= rem 2) (- (/ WIDTH 2) 150)]
+                                                [(= rem 3) (- (/ WIDTH 2) 75)]
+                                                [(= rem 4) (/ WIDTH 2)]
+                                                [(= rem 5) (+ (/ WIDTH 2) 75)]
+                                                [(= rem 6) (+ (/ WIDTH 2) 150)]
+                                                [(= rem 7) (+ (/ WIDTH 2) 225)]
+                                                [else (+ (/ WIDTH 2) 300)]))
+                                        (local [(define quot (quotient n 9))]
+                                                (cond [(= quot 0) 50]
+                                                      [(= quot 1) 125]
+                                                      [else 200]))))))
 (define (game-over? a-world)
+  (= 10 (length (world-shots a-world))))
 
-  (or(alien-reached-earth? (world-alien a-world))
-     (alien-hit? (world-alien a-world)(world-shot a-world))))
+;(define (game-over? a-world)
+ ; (ormap (lambda (x) (first x)) (for/list ([alien (world-aliens a-world)])
+  ;   (list (cond [(>= (posn-y alien) (- (sub1 HEIGHT) (/ (image-height ALIEN-IMG) 2))) #true]
+   ;       [else #false])))))
 
-;alien-hit: alienshot -> boolean
-;purpose to determine if the shot has hit the alien
+;(check-expect (game-over? INIT-WORLD) false)
+;(check-expect (game-over? (make-world ROCKET (list (make-posn 50 HEIGHT)) "down" '())) true)
+;(check-expect (game-over? (make-world ROCKET (list (make-posn 50 (- 1 HEIGHT))) "down" (make-posn 2 2))) false)
+;(define (game-over? a-world)
+ ; (local [
+  ;        (define (alien-reached-earth? an-alien)
+   ;         (>= (posn-y an-alien) (- (sub1 HEIGHT) (/ (image-height ALIEN-IMG) 2))))
+    ;      (define (any-alien-reached-earth? loa)
+     ;          (cond [(empty? loa) #false]
+      ;               [else
+       ;               (cond [(alien-reached-earth? (first loa)) #true]
+        ;                    [else (any-alien-reached-earth? (rest loa))])]))]
+   ;(or (empty? (world-aliens a-world)) (any-alien-reached-earth? (world-aliens a-world)))))
 
+(define (last-message a-world)
+  (cond [(empty? (world-aliens a-world)) (place-image win-msg (/ WIDTH 2) (/ HEIGHT 2) E-SCENE)]
+        [else (place-image lose-msg (/ WIDTH 2) (/ HEIGHT 2) E-SCENE)]))
+
+(define-struct world (rocket aliens dir shots))
+(define INIT-WORLD (make-world ROCKET INIT-ALIENS "right" '()))
+
+;SCRIVE MONDO
+;draw-world: world --> scene
+(define (draw-world w)
+  (local [;draw-world: world --> scene
+          (define (draw-world w) (draw-shots (world-shots w) (draw-loa (world-aliens w) (draw-rocket (world-rocket w) E-SCENE))))
+          ;draw-shots: los --> scene
+          (define (draw-shots a-los scn)
+            (local [ ;draw-shot: shot  scene --> scene
+                    (define (draw-shot a-shot scn) (place-image SHOT-IMG (posn-x a-shot) (posn-y a-shot) scn))]
+              (foldl (lambda (a-shot a-scene) (draw-shot a-shot a-scene)) scn a-los)))
+          ;draw-loa: loa scene --> scene
+          (define (draw-loa a-loa scn)
+            (local [;draw-alien: alien scene --> scene
+                    (define (draw-alien a scn)
+                      (place-image ALIEN-IMG (posn-x a) (posn-y a) scn))]
+              (foldl (lambda (an-alien a-scene) (draw-alien an-alien a-scene)) scn a-loa)))
+          ;draw-rocket: rocket scene --> scene
+          (define (draw-rocket a-rocket scn) (place-image ROCKET-IMG a-rocket ROCKET-Y scn))
+          ]
+    (draw-world w)))
+
+;PROCESSA TASTO
+;process-key: a-world + a-key --> a-world
+;purpose: manages keyboard interactions with the game world.
+(define (process-key a-world a-key)
+  (local [
+          ;compute-shot: los + world -> shots
+          ;purpose: adds a shot to the list of shots on key-stroke
+          (define (compute-shot shots world)
+            (cons (make-posn (world-rocket a-world) SHOT-START-Y) (world-shots a-world)))
+          ; move-rocket: rocket string -> rocket
+          ; Purpose: to move the rocketi n the given direction
+          (define (move-rocket a-rocket direction)
+            (cond [(and (string=? direction "right")
+              (<= (+ a-rocket ROCKET-DELTA-X) (sub1 WIDTH)) (< (+ a-rocket ROCKET-DELTA-X) (- WIDTH (/ (image-width ROCKET-IMG) 2))))
+               (+ a-rocket ROCKET-DELTA-X)]
+                  [(and (string=? direction "left")
+                    (>= (- a-rocket ROCKET-DELTA-X) 0) (> (- a-rocket ROCKET-DELTA-X) (/ (image-width ROCKET-IMG) 2)))
+                     (- a-rocket ROCKET-DELTA-X)]
+                  [else a-rocket]))          
+          ]
+    (match a-key
+      [(or "left" "right") (make-world (move-rocket (world-rocket a-world) a-key)
+                      (world-aliens a-world)
+                      (world-dir a-world)
+                      (world-shots a-world))]
+      ["up" (make-world (world-rocket a-world)
+                  (world-aliens a-world)
+                  (world-dir a-world)
+                  (compute-shot (world-shots a-world) (world-rocket a-world)))])))
+;CREARE NUOVO MONDO
+(define (create-new-world w)
+  (local [
+          ;ALIEN (LOA) FUNCTIONS
+          ;move-loa: loa direction --> loa
+          ;purpose: moves the aliens in the given loa in the given direction
+          (define (move-loa a-loa dir)
+            (local [;move-alien: alien dir --> alien
+                    ;purpose: moves the given alien in the given direction
+                    (define (move-alien a d)
+                      (match d ["right" (move-posn a ALIEN-DELTA-X 0)]
+                        ["left" (move-posn a (* -1 ALIEN-DELTA-X) 0)]
+                        ["down" (move-posn a 0 ALIEN-DELTA-Y)]))
+                    ;move-posn: posn number number --> posn
+                    ;purpose: moves the given posn by the given amounts on x and y
+                    (define (move-posn p xdelta ydelta)
+                      (match p [(posn x y) (make-posn (+ x xdelta) (+ y ydelta))]))]
+                       (for/list ([a a-loa])
+                       (move-alien a dir))))
+;------------------------------------------------------------------------------------------------------------
+          ;DIR FUNCTIONS
+          ;any-alien-at-right-edge?: loa-->boolean
+          ;Purpose: determines if any alien in the given loa is at the right edge
+(define (any-alien-at-right-edge? a-loa)
+  (cond[(empty? a-loa) false]
+       [else (or (alien-at-right-edge? (first a-loa))
+                 (any-alien-at-right-edge? (rest a-loa)))]))
+          ;any-alien-at-left-edge?: loa-> boolean
+          ;Purpose: determines if any alien in the given loa is at the left edge
+(define (any-alien-at-left-edge? a-loa)
+  (cond[(empty? a-loa) false]
+       [else (or (alien-at-left-edge? (first a-loa))
+                 (any-alien-at-left-edge? (rest a-loa)))]))
+;alien-at-right-edge?: alien -> boolean.
+;purpose: Sees if the alien has approached the right edge of the scene
+(define (alien-at-right-edge? alien)
+  (>= (+ (posn-x alien) ALIEN-DELTA-X) RIGHT-EDGE))
+;alien-at-left-edge?: alien --> boolean
+;purpose: sees if the alien has approached the left edge of the scene
+(define (alien-at-left-edge? alien)
+  (<= (- (posn-x alien) ALIEN-DELTA-X) LEFT-EDGE))
+          ;compute new direction: loa direction --> direction
+          ;purpose: to determine the new direction of the given alien using its old direction.
+          (define (compute-new-direction loa dir)
+   (cond [(or (and (string=? dir "right") (any-alien-at-right-edge? loa))
+             (and (string=? dir "left") (any-alien-at-left-edge? loa)))
+         "down"]
+        [(and (string=? dir "down") (any-alien-at-right-edge? loa)) "left"]
+        [(and (string=? dir "down") (any-alien-at-left-edge? loa)) "right"]
+        [else dir]))
+;-------------------------------------------------------------------------------------
+;move-los: a-los -> a-los
+;purpose: moves the list of shots up and removes out of bounds shots.
+(define (move-los a-los)
+  (local [
+          ;move-shot: shot -> shot
+          ;purpose: moves a shot up
+          (define (move-shot a-shot)
+             (cond [(< (- (posn-y a-shot) SHOT-DELTA-Y) 0) (remove a-shot a-los)]
+                   [else (move-posn a-shot 0 (* -1 SHOT-DELTA-Y))]))
+          (define (move-posn p xdelta ydelta)
+      (make-posn (+ (posn-x p) xdelta) (+ (posn-y p) ydelta)))
+          ]
+    (for/list ([shot a-los])
+      (move-shot shot))))
+;----------------------------------------------------------------------------------------
+;alien-hit?: alien + shot --> boolean
+;purpose: determines if a shot hits an alien.
 (define (alien-hit? an-alien a-shot)
-  
-  (cond [(false? a-shot) #false]
-        
-      [else(and (<=(abs(-(posn-x a-shot)(posn-x an-alien)))
-                   (/ ALIEN-WIDTH 2))
-               (<=(abs(-(posn-y a-shot)(posn-y an-alien)))
-                   (/ ALIEN-HEIGHT 2)))]))
+  (and
+   (<= (abs (- (posn-x a-shot) (posn-x an-alien))) (/ ALIEN-WIDTH 2))
+   (<= (abs (- (posn-y a-shot) (posn-y an-alien))) (/ ALIEN-HEIGHT 2))))
 
-
-                
-
-(check-expect (game-over? INIT-WORLD) #false)
-
-(check-expect (game-over? (make-world ROCKET
-
-                                      (make-posn 200 (sub1 HEIGHT))
-
-                                      "right"))
-
-              #true)
-
- 
-
-;alien-reached-earth?: alien--> boolean
-
-;purpose: to determine if the given alien has reached earth
-
-(define (alien-reached-earth? a)
-
-  (>= (posn-y a)
-
-      (- (sub1 HEIGHT) (/ (image-height ALIEN-IMG) 2))))
-
-(check-expect (alien-reached-earth? (world-alien INIT-WORLD)) #false)
-
-(check-expect (alien-reached-earth? (make-posn 200 (sub1 HEIGHT))) #true)
-
-(run-game "Cha")
+;remove-hit-aliens: loa + los --> loa
+;purpose: removes aliens hit by shots during the game.
+(define (remove-hit-aliens loa los)
+  (cond [(empty? los) loa]
+        [else
+         (for*/list ([aliens loa]
+                     [shots los])
+           (cond [(alien-hit? aliens shots) (remove aliens loa)]
+                 [else loa]))]))
+;remove-hit-shots: loa + los --> los
+;purpose: removes shots that hit aliens during the game.
+(define (remove-hit-shots loa los)
+  (cond [(empty? los) los]
+        [else
+         (for*/list ([aliens loa]
+                     [shots los])
+           (cond [(alien-hit? aliens shots) (remove shots los)]
+                 [else loa]))]))
+;----------------------------------------------------------------------------------------
+]
+    (make-world (world-rocket w)
+                (remove-hit-aliens (move-loa (world-aliens w) (world-dir w))
+                                   (move-los (world-shots w)))
+                (compute-new-direction (move-loa (world-aliens w) (world-dir w))
+                                       (world-dir w))
+                (remove-hit-shots (move-loa (world-aliens w) (world-dir w))
+                                  (move-los (world-shots w))))))
+                  
